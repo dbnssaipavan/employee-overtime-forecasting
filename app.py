@@ -284,8 +284,6 @@ with tab2:
             res_col3.metric("Effective Cost per OT Hour", f"${(predicted_cost / overtime_hours if overtime_hours > 0 else 0):.2f}")
     else:
         st.warning("Please resolve dataset suitability warnings in Tab 1 to enable predictions.")
-
-
 # -------------------------------------------------------------
 # TAB 3: Explainability & Dataset Insights (With Graphs & Technique Explanation)
 # -------------------------------------------------------------
