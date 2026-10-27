@@ -20,13 +20,39 @@ st.set_page_config(
 st.sidebar.header("📁 Dataset Management")
 dataset_mode = st.sidebar.radio(
     "Choose Dataset Option",
-    ["Upload Local Dataset", "Load Default Dataset"]
+    ["Load Default Dataset", "Upload Local Dataset"]
 )
 
 df = None
 selected_dataset_label = ""
 
-if dataset_mode == "Upload Local Dataset":
+if dataset_mode == "Load Default Dataset":
+    selected_dataset_label = "Default Overtime Dataset"
+    default_path = "employee_overtime_dataset.csv"
+    
+    if not os.path.exists(default_path):
+        # Auto-generate default dataset on the fly if missing
+        np.random.seed(42)
+        n = 3000
+        df_default = pd.DataFrame({
+            'Experience': np.random.uniform(1.0, 17.0, n),
+            'Attendance': np.random.choice([0.0, 1.0], size=n, p=[0.25, 0.75]),
+            'Holiday': np.random.choice([0.0, 1.0], size=n, p=[0.85, 0.15]),
+            'Weekend_Worked': np.random.choice([0.0, 1.0], size=n, p=[0.90, 0.10]),
+            'Projects_Assigned': np.random.choice([0, 1, 2, 3, 4, 5], size=n, p=[0.1, 0.15, 0.25, 0.25, 0.15, 0.1]),
+            'Monthly_Salary': np.random.normal(69405, 15640, n).clip(40000, 120000),
+            'Hourly_Rate': np.random.normal(394, 88, n).clip(200, 600),
+            'Working_Hours': np.random.normal(8.0, 3.5, n).clip(0.0, 16.0),
+            'Overtime_Hours': np.random.normal(1.5, 1.5, n).clip(0.0, 8.0),
+            'Overtime_Cost': np.random.exponential(500, n).clip(0.0, 4000.0)
+        })
+        df_default.to_csv(default_path, index=False)
+        
+    try:
+        df = pd.read_csv(default_path)
+    except Exception as e:
+        st.sidebar.error(f"Error loading default dataset: {e}")
+else:
     uploaded_file = st.sidebar.file_uploader("Upload Local Dataset (.csv, .xlsx)", type=["csv", "xlsx"])
     if uploaded_file is not None:
         selected_dataset_label = f"Uploaded File: {uploaded_file.name}"
@@ -39,12 +65,6 @@ if dataset_mode == "Upload Local Dataset":
             st.error(f"Error loading uploaded file: {e}")
     else:
         st.sidebar.info("Please upload a local CSV or XLSX file above.")
-else:
-    selected_dataset_label = "Default Overtime Dataset"
-    if os.path.exists("employee_overtime_dataset.csv"):
-        df = pd.read_csv("employee_overtime_dataset.csv")
-    else:
-        st.sidebar.error("Default dataset 'employee_overtime_dataset.csv' not found.")
 
 # Dataset Suitability & Validation Check
 suitability_passed = True
