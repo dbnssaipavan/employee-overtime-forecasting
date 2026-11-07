@@ -130,16 +130,43 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # -------------------------------------------------------------
 # TAB 1: EDA (Tabular Format Only)
 # -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
+# -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
+# -------------------------------------------------------------
 with tab1:
-    st.subheader(f"📊 Exploratory Data Analysis & Suitability Verification — {selected_dataset_label}")
-    st.markdown("Comprehensive statistical audit of every column in the static dataset in tabular format.")
-    
-    with st.expander("🔍 Dataset Suitability & Validation Report", expanded=False):
-        for msg in validation_messages:
-            st.markdown(f"- {msg}")
-        st.success("🎉 **Static dataset is fully suitable and verified for machine learning overtime cost prediction!**")
+    st.subheader("📊 Exploratory Data Analysis")
+    st.markdown("Comprehensive statistical audit and structural overview of the dataset.")
 
     if df is not None:
+        # Dataset Structural Overview
+        st.markdown("### 📌 Dataset Overview")
+        info_col1, info_col2 = st.columns(2)
+        info_col1.metric("Total Rows", f"{df.shape[0]:,}")
+        info_col2.metric("Total Columns", f"{df.shape[1]}")
+        
+        st.markdown("**Column Names:**")
+        cols_list = df.columns.tolist()
+        mid = len(cols_list) // 2 + len(cols_list) % 2
+        col_a, col_b = st.columns(2)
+        with col_a:
+            for c in cols_list[:mid]:
+                st.markdown(f"- `{c}`")
+        with col_b:
+            for c in cols_list[mid:]:
+                st.markdown(f"- `{c}`")
+
         st.markdown("---")
         with st.expander("📊 View Column Summary Statistics (Transposed)", expanded=True):
             st.dataframe(df.describe().T, use_container_width=True)
@@ -176,7 +203,6 @@ with tab1:
             
         summary_df = pd.DataFrame(col_summary_data)
         st.dataframe(summary_df, use_container_width=True)
-
 # -------------------------------------------------------------
 # TAB 2: Single Schedule Predictor
 # -------------------------------------------------------------
