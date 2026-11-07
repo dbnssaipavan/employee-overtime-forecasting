@@ -173,50 +173,72 @@ with tab1:
 # TAB 2: Single Schedule Predictor
 # -------------------------------------------------------------
 with tab2:
-    st.subheader("🔮 Single Schedule Predictor")
+    st.subheader("Input Workforce Schedule Parameters")
     col1, col2, col3 = st.columns(3)
+    
     with col1:
-        working_hours = st.slider("Total Working Hours", min_value=0.0, max_value=16.0, value=9.0, step=0.25)
-        hourly_rate = st.number_input("Hourly Rate ($)", min_value=10.0, max_value=600.0, value=433.0, step=1.0)
+        selected_dept = st.selectbox("Department", departments)
+        selected_shift = st.selectbox("Shift", shifts)
+        working_hours = st.slider("Total Working Hours", min_value=8.0, max_value=16.0, value=11.0, step=0.25)
         
     with col2:
-        monthly_salary = st.number_input("Monthly Salary ($)", min_value=10000.0, max_value=200000.0, value=69405.0, step=500.0)
-        experience = st.slider("Experience (Years)", 0.0, 20.0, 9.0, 0.5)
+        hourly_wage = st.number_input("Hourly Wage ($)", min_value=10.0, max_value=200.0, value=45.0, step=1.0)
+        month = st.selectbox("Month", list(range(1, 13)), index=9)
         
     with col3:
-        attendance = st.selectbox("Attendance Rate / Status", [0.0, 1.0], format_func=lambda x: "Present (1.0)" if x == 1.0 else "Absent (0.0)")
-        holiday = st.selectbox("Holiday Shift?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
-        weekend_worked = st.selectbox("Weekend Worked?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
+        day_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
+        day_of_week = st.selectbox("Day of Week", list(day_map.keys()), format_func=lambda x: day_map[x])
+        is_weekend = 1 if day_of_week in [5, 6] else 0
+        is_holiday = st.selectbox("Holiday Shift?", [0, 1], format_func=lambda x: "Yes" if x == 1 else "No")
 
-    if st.button("Calculate Overtime Forecast", type="primary"):
-        input_dict = {
-            'Experience': experience,
-            'Attendance': attendance,
-            'Holiday': holiday,
-            'Weekend_Worked': weekend_worked,
-            'Projects_Assigned': 2,
-            'Monthly_Salary': monthly_salary,
-            'Hourly_Rate': hourly_rate,
-            'Working_Hours': working_hours,
-            'Overtime_Hours': max(0.0, working_hours - 8.0)
-        }
+    if st.button("Calculate Overtime Forecast & Explain", type="primary"):
+        input_data = pd.DataFrame([{
+            'Department': selected_dept,
+            'Shift': selected_shift,
+            'Actual_Working_Hours': working_hours,
+            'Hourly_Wage': hourly_wage,
+            'Weekend': is_weekend,
+            'Holiday': is_holiday,
+            'Month': month,
+            'Day_of_Week': day_of_week
+        }])
         
-        for col in df.columns:
-            if col != 'Overtime_Cost' and col not in input_dict:
-                input_dict[col] = df[col].mean()
-                
-        input_data = pd.DataFrame([input_dict])
-        input_encoded = pd.get_dummies(input_data)
+        input_encoded = pd.get_dummies(input_data, columns=['Department', 'Shift'])
         input_encoded = input_encoded.reindex(columns=feature_names, fill_value=False)
         
         predicted_cost = model.predict(input_encoded)[0]
-        ot_hours = max(0.0, working_hours - 8.0)
+        overtime_hours = max(0.0, working_hours - 8.0)
         
         st.markdown("---")
         res_col1, res_col2, res_col3 = st.columns(3)
         res_col1.metric("Estimated Overtime Cost", f"${predicted_cost:.2f}")
-        res_col2.metric("Overtime Hours", f"{ot_hours:.2f} hrs")
-        res_col3.metric("Effective Cost per OT Hour", f"${(predicted_cost / ot_hours if ot_hours > 0 else 0):.2f}")
+        res_col2.metric("Overtime Hours", f"{overtime_hours:.2f} hrs")
+        res_col3.metric("Effective Cost / OT Hour", f"${(predicted_cost / overtime_hours if overtime_hours > 0 else 0):.2f}")
+
+        # Local SHAP Explanation for this specific prediction
+        st.subheader("🔍 Why did the model predict this cost?")
+        st.write("The breakdown below shows how each input feature pushed the predicted cost **higher (red/positive)** or **lower (blue/negative)** relative to the baseline average.")
+        
+        explainer = shap.TreeExplainer(model)
+        shap_values_single = explainer.shap_values(input_encoded)
+        
+        # Create local feature contribution dataframe
+        contrib_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Value': input_encoded.iloc[0].values,
+            'SHAP Impact ($)': shap_values_single[0]
+        }).sort_values(by='SHAP Impact ($)', ascending=False)
+        
+        fig, ax = plt.subplots(figsize=(8, 4))
+        colors = ['#ff4b4b' if x > 0 else '#1c83e1' for x in contrib_df['SHAP Impact ($)'].head(8)]
+        contrib_df.head(8).sort_values(by='SHAP Impact ($)', ascending=True).plot(
+            kind='barh', x='Feature', y='SHAP Impact ($)', ax=ax, color=colors
+        )
+        ax.set_title("Top Feature Contributions for This Specific Shift")
+        ax.set_xlabel("Impact on Cost ($)")
+        st.pyplot(fig)
+
+
 
 # -------------------------------------------------------------
 # TAB 3: Explainability & Dataset Insights (With Graphs & Technique Explanation)
