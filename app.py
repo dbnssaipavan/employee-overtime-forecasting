@@ -16,39 +16,46 @@ st.set_page_config(
     layout="wide"
 )
 
-# Load Static Default Dataset Automatically
+# Load Static Default Dataset Automatically with Department & Shift
 default_path = "employee_overtime_dataset.csv"
 if not os.path.exists(default_path):
     np.random.seed(42)
     n = 3000
-    experience = np.random.uniform(1.0, 17.0, n)
-    attendance = np.random.choice([0.0, 1.0], size=n, p=[0.1, 0.9])
-    holiday = np.random.choice([0.0, 1.0], size=n, p=[0.85, 0.15])
-    weekend_worked = np.random.choice([0.0, 1.0], size=n, p=[0.9, 0.1])
-    projects_assigned = np.random.randint(1, 6, n)
-    monthly_salary = np.random.normal(69405, 15000, n).clip(30000, 150000)
-    hourly_rate = monthly_salary / 160.0 + np.random.normal(0, 5, n)
-    working_hours = np.random.normal(8.5, 2.0, n).clip(8.0, 16.0)
-    overtime_hours = working_hours - 8.0
-    overtime_cost = overtime_hours * (hourly_rate * 1.5) * (1.0 + 0.5 * holiday + 0.5 * weekend_worked) + np.random.normal(0, 10, n)
-    overtime_cost = overtime_cost.clip(0.0, 5000.0)
+    departments = ['Engineering', 'Operations', 'Finance', 'Logistics', 'HR']
+    shifts = ['Morning', 'Evening', 'Night']
     
     df_default = pd.DataFrame({
-        'Experience': experience,
-        'Attendance': attendance,
-        'Holiday': holiday,
-        'Weekend_Worked': weekend_worked,
-        'Projects_Assigned': projects_assigned,
-        'Monthly_Salary': monthly_salary,
-        'Hourly_Rate': hourly_rate,
-        'Working_Hours': working_hours,
-        'Overtime_Hours': overtime_hours,
-        'Overtime_Cost': overtime_cost
+        'Department': np.random.choice(departments, n),
+        'Shift': np.random.choice(shifts, n),
+        'Experience': np.random.uniform(1.0, 17.0, n),
+        'Attendance': np.random.choice([0.0, 1.0], size=n, p=[0.1, 0.9]),
+        'Holiday': np.random.choice([0.0, 1.0], size=n, p=[0.85, 0.15]),
+        'Weekend_Worked': np.random.choice([0.0, 1.0], size=n, p=[0.9, 0.1]),
+        'Projects_Assigned': np.random.randint(1, 6, n),
+        'Monthly_Salary': np.random.normal(69405, 15000, n).clip(30000, 150000),
+        'Hourly_Rate': np.random.normal(433, 50, n).clip(150, 600),
+        'Working_Hours': np.random.normal(8.5, 2.0, n).clip(8.0, 16.0),
+        'Overtime_Hours': np.random.normal(1.5, 1.5, n).clip(0.0, 8.0)
     })
+    
+    dept_mult = {'Engineering': 1.2, 'Operations': 1.0, 'Finance': 1.1, 'Logistics': 0.9, 'HR': 0.8}
+    shift_mult = {'Morning': 1.0, 'Evening': 1.15, 'Night': 1.3}
+    
+    ot_cost = []
+    for _, row in df_default.iterrows():
+        ot_hrs = max(0.0, row['Working_Hours'] - 8.0)
+        base = ot_hrs * (row['Hourly_Rate'] * 1.5) * dept_mult[row['Department']] * shift_mult[row['Shift']]
+        premium = 1.0 + 0.5 * row['Holiday'] + 0.5 * row['Weekend_Worked']
+        ot_cost.append(np.clip(base * premium + np.random.normal(0, 10), 0.0, 5000.0))
+        
+    df_default['Overtime_Cost'] = ot_cost
     df_default.to_csv(default_path, index=False)
 
 df = pd.read_csv(default_path)
 selected_dataset_label = "Static Workforce Overtime Dataset"
+
+departments = df['Department'].unique().tolist() if 'Department' in df.columns else ['Engineering', 'Operations', 'Finance', 'Logistics', 'HR']
+shifts = df['Shift'].unique().tolist() if 'Shift' in df.columns else ['Morning', 'Evening', 'Night']
 
 # Dataset Suitability & Validation Check
 suitability_passed = True
@@ -77,7 +84,8 @@ def train_model(df, target_name):
     X = df.drop(columns=['Overtime_Cost'])
     y = df['Overtime_Cost']
     
-    X_encoded = pd.get_dummies(X, drop_first=True)
+    categorical_cols = [c for c in ['Department', 'Shift'] if c in X.columns]
+    X_encoded = pd.get_dummies(X, columns=categorical_cols, drop_first=True)
     X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
     
     model = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=42)
@@ -172,54 +180,54 @@ with tab1:
 # -------------------------------------------------------------
 # TAB 2: Single Schedule Predictor
 # -------------------------------------------------------------
-# -------------------------------------------------------------
-# TAB 2: Single Schedule Predictor
-# -------------------------------------------------------------
 with tab2:
-    st.subheader("🔮 Single Schedule Predictor")
+    st.subheader("Input Workforce Schedule Parameters")
+    
     col1, col2, col3 = st.columns(3)
+    
     with col1:
-        working_hours = st.slider("Total Working Hours", min_value=0.0, max_value=16.0, value=8.0, step=0.25)
-        hourly_rate = st.number_input("Hourly Rate ($)", min_value=10.0, max_value=600.0, value=394.0, step=1.0)
+        selected_dept = st.selectbox("Department", departments)
+        selected_shift = st.selectbox("Shift", shifts)
+        working_hours = st.slider("Total Working Hours", min_value=8.0, max_value=16.0, value=11.0, step=0.25)
         
     with col2:
-        monthly_salary = st.number_input("Monthly Salary ($)", min_value=10000.0, max_value=200000.0, value=69405.0, step=500.0)
-        experience = st.slider("Experience (Years)", 0.0, 20.0, 9.0, 0.5)
+        hourly_wage = st.number_input("Hourly Wage ($)", min_value=10.0, max_value=200.0, value=45.0, step=1.0)
+        month = st.selectbox("Month", list(range(1, 13)), index=9) # Default October
         
     with col3:
-        attendance = st.selectbox("Attendance Rate / Status", [0.0, 1.0], format_func=lambda x: "Present (1.0)" if x == 1.0 else "Absent (0.0)")
-        holiday = st.selectbox("Holiday Shift?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
-        weekend_worked = st.selectbox("Weekend Worked?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
+        day_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
+        day_of_week = st.selectbox("Day of Week", list(day_map.keys()), format_func=lambda x: day_map[x])
+        is_weekend = 1 if day_of_week in [5, 6] else 0
+        is_holiday = st.selectbox("Holiday Shift?", [0, 1], format_func=lambda x: "Yes" if x == 1 else "No")
+        st.info(f"Weekend Status: **{'Yes' if is_weekend == 1 else 'No'}**")
 
     if st.button("Calculate Overtime Forecast", type="primary"):
-        input_dict = {
-            'Experience': experience,
-            'Attendance': attendance,
-            'Holiday': holiday,
-            'Weekend_Worked': weekend_worked,
+        input_data = pd.DataFrame([{
+            'Department': selected_dept,
+            'Shift': selected_shift,
+            'Experience': 9.0,
+            'Attendance': 1.0,
+            'Holiday': float(is_holiday),
+            'Weekend_Worked': float(is_weekend),
             'Projects_Assigned': 2,
-            'Monthly_Salary': monthly_salary,
-            'Hourly_Rate': hourly_rate,
+            'Monthly_Salary': hourly_wage * 160.0,
+            'Hourly_Rate': hourly_wage,
             'Working_Hours': working_hours,
             'Overtime_Hours': max(0.0, working_hours - 8.0)
-        }
+        }])
         
-        for col in df.columns:
-            if col != 'Overtime_Cost' and col not in input_dict:
-                input_dict[col] = df[col].mean()
-                
-        input_data = pd.DataFrame([input_dict])
-        input_encoded = pd.get_dummies(input_data)
+        categorical_cols = [c for c in ['Department', 'Shift'] if c in input_data.columns]
+        input_encoded = pd.get_dummies(input_data, columns=categorical_cols)
         input_encoded = input_encoded.reindex(columns=feature_names, fill_value=False)
         
         predicted_cost = model.predict(input_encoded)[0]
-        ot_hours = max(0.0, working_hours - 8.0)
+        overtime_hours = max(0.0, working_hours - 8.0)
         
         st.markdown("---")
         res_col1, res_col2, res_col3 = st.columns(3)
         res_col1.metric("Estimated Overtime Cost", f"${predicted_cost:.2f}")
-        res_col2.metric("Overtime Hours", f"{ot_hours:.2f} hrs")
-        res_col3.metric("Effective Cost per OT Hour", f"${(predicted_cost / ot_hours if ot_hours > 0 else 0):.2f}")
+        res_col2.metric("Overtime Hours", f"{overtime_hours:.2f} hrs")
+        res_col3.metric("Effective Cost per OT Hour", f"${(predicted_cost / overtime_hours if overtime_hours > 0 else 0):.2f}")
 
 # -------------------------------------------------------------
 # TAB 3: Explainability & Dataset Insights (With Graphs & Technique Explanation)
@@ -268,7 +276,7 @@ with tab4:
     col_s1, col_s2, col_s3 = st.columns(3)
     with col_s1:
         sim_hours = st.slider("Shift Working Hours", 0.0, 16.0, 10.0, 0.25, key="sim_hours")
-        sim_rate = st.number_input("Hourly Rate ($)", 10.0, 600.0, 433.0, 1.0, key="sim_rate")
+        sim_rate = st.number_input("Hourly Rate ($)", 10.0, 600.0, 45.0, 1.0, key="sim_rate")
     with col_s2:
         sim_headcount = st.slider("Employee Headcount", 1, 100, 15, key="sim_headcount")
         sim_holiday = st.selectbox("Holiday Premium?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)", key="sim_hol")
@@ -277,9 +285,9 @@ with tab4:
 
     if 'scenario_list' not in st.session_state:
         st.session_state['scenario_list'] = [
-            {"Name": "Standard Weekday Shift", "Hours": 8.0, "Rate": 433.0, "Headcount": 10, "Weekend": 0.0, "Holiday": 0.0},
-            {"Name": "Extended Weekend Shift", "Hours": 11.0, "Rate": 433.0, "Headcount": 10, "Weekend": 1.0, "Holiday": 0.0},
-            {"Name": "Holiday Surge Shift", "Hours": 12.0, "Rate": 433.0, "Headcount": 10, "Weekend": 0.0, "Holiday": 1.0},
+            {"Name": "Standard Weekday Shift", "Hours": 10.0, "Rate": 45.0, "Headcount": 10, "Weekend": 0.0, "Holiday": 0.0},
+            {"Name": "Extended Weekend Shift", "Hours": 12.0, "Rate": 45.0, "Headcount": 10, "Weekend": 1.0, "Holiday": 0.0},
+            {"Name": "Holiday Surge Shift", "Hours": 13.0, "Rate": 45.0, "Headcount": 10, "Weekend": 0.0, "Holiday": 1.0},
         ]
 
     if st.button("➕ Add Custom Scenario", type="primary"):
@@ -297,12 +305,14 @@ with tab4:
         results = []
         for s in st.session_state['scenario_list']:
             row_dict = {
+                'Department': selected_dept,
+                'Shift': selected_shift,
                 'Experience': 9.0,
                 'Attendance': 1.0,
                 'Holiday': s['Holiday'],
                 'Weekend_Worked': s['Weekend'],
                 'Projects_Assigned': 2,
-                'Monthly_Salary': 69405.0,
+                'Monthly_Salary': s['Rate'] * 160.0,
                 'Hourly_Rate': s['Rate'],
                 'Working_Hours': s['Hours'],
                 'Overtime_Hours': max(0.0, s['Hours'] - 8.0)
@@ -312,7 +322,8 @@ with tab4:
                     row_dict[col] = df[col].mean()
                     
             row_df = pd.DataFrame([row_dict])
-            row_enc = pd.get_dummies(row_df).reindex(columns=feature_names, fill_value=False)
+            categorical_cols = [c for c in ['Department', 'Shift'] if c in row_df.columns]
+            row_enc = pd.get_dummies(row_df, columns=categorical_cols).reindex(columns=feature_names, fill_value=False)
             per_employee_cost = model.predict(row_enc)[0]
             total_team_cost = per_employee_cost * s['Headcount']
             
