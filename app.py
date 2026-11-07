@@ -172,12 +172,15 @@ with tab1:
 # -------------------------------------------------------------
 # TAB 2: Single Schedule Predictor
 # -------------------------------------------------------------
+# -------------------------------------------------------------
+# TAB 2: Single Schedule Predictor
+# -------------------------------------------------------------
 with tab2:
     st.subheader("🔮 Single Schedule Predictor")
     col1, col2, col3 = st.columns(3)
     with col1:
-        working_hours = st.slider("Total Working Hours", min_value=0.0, max_value=16.0, value=9.0, step=0.25)
-        hourly_rate = st.number_input("Hourly Rate ($)", min_value=10.0, max_value=600.0, value=433.0, step=1.0)
+        working_hours = st.slider("Total Working Hours", min_value=0.0, max_value=16.0, value=8.0, step=0.25)
+        hourly_rate = st.number_input("Hourly Rate ($)", min_value=10.0, max_value=600.0, value=394.0, step=1.0)
         
     with col2:
         monthly_salary = st.number_input("Monthly Salary ($)", min_value=10000.0, max_value=200000.0, value=69405.0, step=500.0)
