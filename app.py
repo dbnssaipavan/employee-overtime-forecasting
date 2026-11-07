@@ -173,50 +173,33 @@ with tab1:
 # TAB 2: Single Schedule Predictor
 # -------------------------------------------------------------
 with tab2:
-    st.subheader("🔮 Single Schedule Predictor")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        working_hours = st.slider("Total Working Hours", min_value=0.0, max_value=16.0, value=9.0, step=0.25)
-        hourly_rate = st.number_input("Hourly Rate ($)", min_value=10.0, max_value=600.0, value=433.0, step=1.0)
+    st.subheader("Compare Shift Schedules")
+    st.write("Evaluate how adjusting working hours or shifting work to weekdays impacts total overtime expenses.")
+    
+    # Sample scenario table
+    num_employees = st.slider("Number of Employees on Shift", 1, 50, 10)
+    
+    scenario_data = pd.DataFrame([
+        {"Scenario": "Standard Weekday Shift", "Dept": selected_dept, "Shift": selected_shift, "Hours": 10.0, "Wage": hourly_wage, "Weekend": 0, "Holiday": 0, "Month": month, "Day": 1},
+        {"Scenario": "Extended Weekend Shift", "Dept": selected_dept, "Shift": selected_shift, "Hours": 12.0, "Wage": hourly_wage, "Weekend": 1, "Holiday": 0, "Month": month, "Day": 5},
+        {"Scenario": "Holiday Peak Workload", "Dept": selected_dept, "Shift": selected_shift, "Hours": 13.0, "Wage": hourly_wage, "Weekend": 0, "Holiday": 1, "Month": month, "Day": 2},
+    ])
+    
+    preds = []
+    for _, row in scenario_data.iterrows():
+        row_df = pd.DataFrame([{
+            'Department': row['Dept'], 'Shift': row['Shift'],
+            'Actual_Working_Hours': row['Hours'], 'Hourly_Wage': row['Wage'],
+            'Weekend': row['Weekend'], 'Holiday': row['Holiday'],
+            'Month': row['Month'], 'Day_of_Week': row['Day']
+        }])
+        row_enc = pd.get_dummies(row_df, columns=['Department', 'Shift']).reindex(columns=feature_names, fill_value=False)
+        single_cost = model.predict(row_enc)[0]
+        preds.append(round(single_cost * num_employees, 2))
         
-    with col2:
-        monthly_salary = st.number_input("Monthly Salary ($)", min_value=10000.0, max_value=200000.0, value=69405.0, step=500.0)
-        experience = st.slider("Experience (Years)", 0.0, 20.0, 9.0, 0.5)
-        
-    with col3:
-        attendance = st.selectbox("Attendance Rate / Status", [0.0, 1.0], format_func=lambda x: "Present (1.0)" if x == 1.0 else "Absent (0.0)")
-        holiday = st.selectbox("Holiday Shift?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
-        weekend_worked = st.selectbox("Weekend Worked?", [0.0, 1.0], format_func=lambda x: "Yes (1.0)" if x == 1.0 else "No (0.0)")
+    scenario_data["Total Team Cost ($)"] = preds
+    st.dataframe(scenario_data[["Scenario", "Hours", "Weekend", "Holiday", "Total Team Cost ($)"]], use_container_width=True)
 
-    if st.button("Calculate Overtime Forecast", type="primary"):
-        input_dict = {
-            'Experience': experience,
-            'Attendance': attendance,
-            'Holiday': holiday,
-            'Weekend_Worked': weekend_worked,
-            'Projects_Assigned': 2,
-            'Monthly_Salary': monthly_salary,
-            'Hourly_Rate': hourly_rate,
-            'Working_Hours': working_hours,
-            'Overtime_Hours': max(0.0, working_hours - 8.0)
-        }
-        
-        for col in df.columns:
-            if col != 'Overtime_Cost' and col not in input_dict:
-                input_dict[col] = df[col].mean()
-                
-        input_data = pd.DataFrame([input_dict])
-        input_encoded = pd.get_dummies(input_data)
-        input_encoded = input_encoded.reindex(columns=feature_names, fill_value=False)
-        
-        predicted_cost = model.predict(input_encoded)[0]
-        ot_hours = max(0.0, working_hours - 8.0)
-        
-        st.markdown("---")
-        res_col1, res_col2, res_col3 = st.columns(3)
-        res_col1.metric("Estimated Overtime Cost", f"${predicted_cost:.2f}")
-        res_col2.metric("Overtime Hours", f"{ot_hours:.2f} hrs")
-        res_col3.metric("Effective Cost per OT Hour", f"${(predicted_cost / ot_hours if ot_hours > 0 else 0):.2f}")
 
 # -------------------------------------------------------------
 # TAB 3: Explainability & Dataset Insights (With Graphs & Technique Explanation)
