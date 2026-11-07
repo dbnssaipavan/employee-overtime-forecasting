@@ -167,12 +167,8 @@ with tab1:
 
 # -------------------------------------------------------------
 # TAB 2: Single Schedule Predictor
-# -------------------------------------------------------------
-with tab2:
+# -------------------------------------------------------------with tab2:
     st.subheader("Input Workforce Schedule Parameters")
-    
-    departments = df['Department'].unique().tolist() if 'Department' in df.columns else ['IT', 'Sales', 'HR', 'Operations']
-    shifts = df['Shift'].unique().tolist() if 'Shift' in df.columns else ['Morning', 'Evening', 'Night']
     
     col1, col2, col3 = st.columns(3)
     
@@ -183,7 +179,7 @@ with tab2:
         
     with col2:
         hourly_wage = st.number_input("Hourly Wage ($)", min_value=10.0, max_value=200.0, value=45.0, step=1.0)
-        month = st.selectbox("Month", list(range(1, 13)), index=9)
+        month = st.selectbox("Month", list(range(1, 13)), index=9) # Default October
         
     with col3:
         day_map = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday", 4: "Friday", 5: "Saturday", 6: "Sunday"}
@@ -196,12 +192,15 @@ with tab2:
         input_data = pd.DataFrame([{
             'Department': selected_dept,
             'Shift': selected_shift,
-            'Actual_Working_Hours': working_hours,
-            'Hourly_Wage': hourly_wage,
-            'Weekend': is_weekend,
-            'Holiday': int(is_holiday),
-            'Month': month,
-            'Day_of_Week': day_of_week
+            'Experience': 9.0,
+            'Attendance': 1.0,
+            'Holiday': float(is_holiday),
+            'Weekend_Worked': float(is_weekend),
+            'Projects_Assigned': 2,
+            'Monthly_Salary': hourly_wage * 160.0,
+            'Hourly_Rate': hourly_wage,
+            'Working_Hours': working_hours,
+            'Overtime_Hours': max(0.0, working_hours - 8.0)
         }])
         
         categorical_cols = [c for c in ['Department', 'Shift'] if c in input_data.columns]
