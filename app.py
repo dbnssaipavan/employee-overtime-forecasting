@@ -177,7 +177,7 @@ with tab2:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        selected_dept = st.selectbox("Department", departments)
+        selected_dept = st.selectbox("Department", department)
         selected_shift = st.selectbox("Shift", shifts)
         working_hours = st.slider("Total Working Hours", min_value=8.0, max_value=16.0, value=11.0, step=0.25)
         
