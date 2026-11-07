@@ -130,9 +130,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # -------------------------------------------------------------
 # TAB 1: EDA (Tabular Format Only)
 # -------------------------------------------------------------
-# -------------------------------------------------------------
-# TAB 1: EDA (Tabular Format Only, Exact Dataset Values)
-# -------------------------------------------------------------
 with tab1:
     st.subheader(f"📊 Exploratory Data Analysis & Suitability Verification — {selected_dataset_label}")
     st.markdown("Comprehensive statistical audit of every column in the static dataset in tabular format.")
@@ -179,28 +176,6 @@ with tab1:
             
         summary_df = pd.DataFrame(col_summary_data)
         st.dataframe(summary_df, use_container_width=True)
-        
-        st.markdown("---")
-        st.markdown("### 📋 Individual Column Statistics Tables")
-        for col in df.select_dtypes(include=[np.number]).columns:
-            with st.expander(f"📋 Column Statistics Table: `{col}`"):
-                col_stats_df = pd.DataFrame({
-                    "Statistic": ["Count", "Mean", "Median", "Std Dev", "Min", "25%", "50%", "75%", "Max", "Missing Values"],
-                    "Value": [
-                        f"{df[coformat_func:=lambda x: x]}" # standard count
-                        f"{df[col].count():,}",
-                        f"{df[col].mean():.4f}",
-                        f"{df[col].median():.4f}",
-                        f"{df[col].std():.4f}",
-                        f"{df[col].min():.4f}",
-                        f"{df[col].quantile(0.25):.4f}",
-                        f"{df[col].quantile(0.50):.4f}",
-                        f"{df[col].quantile(0.75):.4f}",
-                        f"{df[col].max():.4f}",
-                        f"{int(df[col].isnull().sum())}"
-                    ]
-                })
-                st.dataframe(col_stats_df, use_container_width=True)
 
 # -------------------------------------------------------------
 # TAB 2: Single Schedule Predictor
