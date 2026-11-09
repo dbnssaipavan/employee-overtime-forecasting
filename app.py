@@ -127,7 +127,7 @@ with tab1:
             missing_pct = (missing_count / len(df)) * 100
             unique_vals = int(df[col].nunique())
             
-            if np.issubdtype(df[col].dtype, np.number):
+            if pd.api.types.is_numeric_dtype(df[col]):
                 mean_val = f"{df[col].mean():.2f}"
                 std_val = f"{df[col].std():.2f}"
                 min_val = f"{df[col].min():.2f}"
